@@ -30,11 +30,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Deploying in a job of its own gives the uploaded artifact time to
+  # show up in the run's artifact list; deploy-pages in the same job
+  # can look for it too soon and find nothing.
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -51,5 +51,12 @@ jobs:
         with:
           path: site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
