@@ -1,0 +1,54 @@
+# Publishes a copy of agex-studio-apps at https://agex-studio.github.io,
+# the origin test_app's hidden test frames load from. It is at another
+# site than agex.studio (github.io is on the Public Suffix List), so
+# Chrome and Firefox give a test frame its own process: what it holds
+# (decoded screenshots) leaves with that process, and its long tasks
+# don't stall the studio's tab.
+#
+# The copy leaves out CNAME, which names apps.agex.studio's domain, and
+# auth-relay.html, whose sign-in redirects are registered for
+# apps.agex.studio alone.
+name: Deploy
+
+on:
+  # sent by agex-studio-apps on each push to its main
+  repository_dispatch:
+    types: [apps-updated]
+  # in case a dispatch is missed
+  schedule:
+    - cron: "23 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ashenfad/agex-studio-apps
+          ref: main
+          path: site
+
+      - name: Leave out what is apps.agex.studio's alone
+        run: rm -rf site/.git site/.github site/CNAME site/auth-relay.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
